@@ -109,7 +109,10 @@ export const DataProvider = ({ children }) => {
         'Content-Type': 'application/json'
       };
 
-      const response = await axios.post(url, {}, { headers, timeout: 15000 });
+      const response = await axios.post(url, {}, { 
+        headers, 
+        timeout: 120000 
+      });
 
       if (response.data && response.data.message) {
         const message = response.data.message;
