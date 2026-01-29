@@ -248,7 +248,7 @@ const Cotizador = () => {
                   <div className="ot-subject">{ot.subject}</div>
                   <div className="ot-info">
                     <span>🕒 {ot.labor_hours}h</span>
-                    <span>💰 ${ot.labor_cost.toFixed(2)}</span>
+                    <span>💰 U$D{ot.labor_cost.toFixed(2)}</span>
                     <span>👥 {ot.technicians_count}</span>
                   </div>
                 </div>
