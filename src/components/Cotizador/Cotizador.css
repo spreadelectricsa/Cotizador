@@ -26,6 +26,86 @@
   gap: 1rem;
 }
 
+/* ESTILOS DEL FILTRO DE AÑO - FUERA DEL MEDIA QUERY */
+.year-filter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-right: 20px;
+  padding: 0;
+  background: none;
+  border: none;
+}
+
+.year-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.year-select-wrapper {
+  position: relative;
+  min-width: 100px;
+}
+
+.year-select {
+  padding: 0.5rem 2rem 0.5rem 1rem;
+  border: none;
+  background: var(--primary);
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 0.75rem;
+  width: 100%;
+  outline: none;
+  transition: all 0.3s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.year-select:hover:not(:disabled) {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.year-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Flecha personalizada blanca */
+.year-select-wrapper::after {
+  content: "▼";
+  font-size: 0.7rem;
+  color: white;
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+.year-select-wrapper:hover::after {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.year-select option {
+  background: var(--dark-card);
+  color: var(--text-light);
+  padding: 0.75rem;
+  border: none;
+}
+
+.year-select option:hover {
+  background: rgba(79, 70, 229, 0.2);
+}
+
+/* FIN ESTILOS FILTRO AÑO */
+
 .status-indicator {
   padding: 0.5rem 1rem;
   border-radius: 0.75rem;
@@ -87,7 +167,7 @@
 .search-section {
   margin-bottom: 2rem;
   position: relative;
-  z-index: 1100; /* Aumentado para estar por encima */
+  z-index: 1100;
 }
 
 .search-wrapper {
@@ -115,7 +195,7 @@
 
 .search-results-dropdown {
   position: absolute;
-  top: calc(100% + 2px); /* Añade pequeño espacio */
+  top: calc(100% + 2px);
   left: 0;
   right: 0;
   background: var(--dark-card);
@@ -124,7 +204,7 @@
   border-radius: 0 0 0.75rem 0.75rem;
   max-height: 400px;
   overflow-y: auto;
-  z-index: 1102; /* Aumentado significativamente */
+  z-index: 1102;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
 }
 
@@ -182,7 +262,7 @@
   gap: 2rem;
   margin-bottom: 2rem;
   position: relative;
-  z-index: 1; /* Muy bajo */
+  z-index: 1;
 }
 
 @media (max-width: 1024px) {
@@ -198,7 +278,6 @@
   border: 1px solid var(--glass-border);
   border-radius: 1rem;
   padding: 1.5rem;
-  /* NO añadir position: relative aquí */
 }
 
 .section-title {
@@ -212,12 +291,12 @@
 }
 
 .ot-sector {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   background: rgba(79, 70, 229, 0.2);
-  color: var(--primary);
+  color: white;
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .ot-list {
@@ -353,26 +432,67 @@
 
 .factor-container {
   display: flex;
+  flex-direction: column;
+  /* label arriba */
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-  color: var(--text-muted);
+  gap: 4px;
+  /* aire justo entre label y controles */
+}
+
+.factor-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+
+.factor-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.factor-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 0.3rem;
+  background: var(--primary);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 800;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  line-height: 1;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.factor-btn:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.factor-btn:active {
+  transform: translateY(0);
 }
 
 .factor-input {
-  width: 60px;
-  padding: 0.5rem;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-light);
-  border-radius: 0.5rem;
+  width: 52px;
+  padding: 0.3rem 0.35rem;
+  border: none;
+  background: rgba(79, 70, 229, 0.15);
+  color: white;
+  border-radius: 0.55rem;
   text-align: center;
-  transition: all 0.3s ease;
+  font-weight: 700;
+  font-size: 0.85rem;
 }
 
 .factor-input:focus {
   outline: none;
-  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.35);
 }
 
 .btn {
@@ -399,8 +519,9 @@
 
 .btn-danger {
   background: rgba(239, 68, 68, 0.2);
-  color: var(--danger);
+  color: white;
   border: 1px solid rgba(239, 68, 68, 0.3);
+  font-weight: 900;
 }
 
 .btn-danger:hover {
@@ -481,7 +602,7 @@
   text-align: right;
   font-weight: bold;
   font-size: 1.1rem;
-  color: var(--primary);
+  color: white;
   padding-top: 0.5rem;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -592,35 +713,76 @@
   padding: 0.75rem;
 }
 
+/* Estilos para mostrar el año en los resultados - FUERA DEL MEDIA QUERY */
+.result-year {
+  font-size: 0.75rem;
+  color: white;
+  margin-top: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 0.5rem;
+  display: inline-block;
+}
+
+.ot-year {
+  font-size: 0.75rem;
+  color: white;
+  background: rgba(79, 70, 229, 0.2);
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.ot-year-badge {
+  font-size: 0.7rem;
+  color: white;
+  background: rgba(79, 70, 229, 0.2);
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.5rem;
+  margin-left: 0.5rem;
+  font-weight: 500;
+}
+
+/* MEDIA QUERIES al final */
 @media (max-width: 640px) {
   .cotizador-header {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .header-controls {
     flex-direction: column;
+    align-items: stretch;
   }
-  
+
+  .year-filter {
+    margin-right: 0;
+    margin-bottom: 1rem;
+    justify-content: space-between;
+  }
+
   .main-grid {
     gap: 1rem;
   }
-  
+
   .quote-item-header {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .item-name-input {
     min-width: 100%;
   }
-  
+
   .summary-bar {
     flex-direction: column;
     gap: 1rem;
     text-align: center;
   }
-  
+
   .modal-actions {
     flex-direction: column;
   }

@@ -3,8 +3,17 @@ import { useData } from '../Shared/DataContext';
 import './Cotizador.css';
 
 const Cotizador = () => {
-  const { db, loading, loadStatus, lastUpdate, refreshData } = useData();
-  
+  const {
+    db,
+    loading,
+    loadStatus,
+    lastUpdate,
+    refreshData,
+    selectedYear,
+    availableYears,
+    changeYearFilter
+  } = useData();
+
   const [currentTicket, setCurrentTicket] = useState(null);
   const [quoteItems, setQuoteItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,7 +59,16 @@ const Cotizador = () => {
   };
 
   const updateItemFactor = (id, factor) => {
-    setQuoteItems(quoteItems.map(i => i.id === id ? { ...i, factor: parseFloat(factor) || 1 } : i));
+    const value = String(factor).replace(',', '.');
+    const parsed = parseFloat(value);
+
+    setQuoteItems(items =>
+      items.map(i =>
+        i.id === id
+          ? { ...i, factor: isNaN(parsed) ? i.factor : Math.max(0.1, parsed) }
+          : i
+      )
+    );
   };
 
   const deleteItem = (id) => {
@@ -88,12 +106,14 @@ const Cotizador = () => {
 
   const grandTotal = quoteItems.reduce((sum, item) => sum + calculateItemTotal(item), 0);
 
+  // ================= MODIFICACION: Detalle completo con subtotal de OT y factor =================
   const generatePreview = () => {
     if (!currentTicket) return;
 
     let txt = `COTIZACION DE MANO DE OBRA - ${currentTicket.id}\n`;
     txt += `ASUNTO: ${currentTicket.subject}\n`;
     txt += `FECHA: ${new Date().toLocaleString()}\n`;
+    txt += `AÑO: ${selectedYear}\n`;
     if (lastUpdate) {
       txt += `ÚLTIMA ACTUALIZACIÓN: ${lastUpdate.toLocaleTimeString()}\n`;
     }
@@ -102,11 +122,16 @@ const Cotizador = () => {
 
     quoteItems.forEach((item, idx) => {
       txt += `\nITEM ${idx + 1}: ${item.name.toUpperCase()}\n`;
-      txt += `FACTOR: ${item.factor}\n`;
+      txt += `FACTOR APLICADO: ${item.factor}\n`;
+
+      let subtotalItem = 0;
       item.ots.forEach(ot => {
-        txt += `- OT: ${ot.id} | ${ot.subject}\n`;
+        txt += `- OT: ${ot.id} | ${ot.subject} | Subtotal OT: $${ot.labor_cost.toFixed(2)}\n`;
+        subtotalItem += ot.labor_cost;
       });
-      txt += `SUBTOTAL: $${calculateItemTotal(item).toFixed(2)}\n`;
+
+      txt += `SUBTOTAL SIN FACTOR: $${subtotalItem.toFixed(2)}\n`;
+      txt += `SUBTOTAL CON FACTOR: $${(subtotalItem * item.factor).toFixed(2)}\n`;
     });
 
     txt += `\n------------------------------------------\n`;
@@ -115,6 +140,7 @@ const Cotizador = () => {
     setPreviewText(txt);
     setIsPreviewOpen(true);
   };
+  // ==========================================================================================
 
   const downloadFile = (content, fileName, mimeType) => {
     const blob = new Blob([content], { type: mimeType });
@@ -129,20 +155,21 @@ const Cotizador = () => {
   };
 
   const handleDownloadTxt = () => {
-    downloadFile(previewText, `cotizacion_${currentTicket.id}.txt`, 'text/plain');
+    downloadFile(previewText, `cotizacion_${currentTicket.id}_${selectedYear}.txt`, 'text/plain');
   };
 
   const handleDownloadCsv = () => {
     let csv = "\uFEFF";
-    csv += "Item;Nombre;Factor;OT;OT_Asunto;Subtotal\n";
+    csv += "Item;Nombre;Factor;OT;OT_Asunto;Subtotal_Sin_Factor;Subtotal_Con_Factor\n";
 
     quoteItems.forEach((item, idx) => {
-      const subtotal = calculateItemTotal(item).toFixed(2).replace('.', ',');
+      let subtotalItem = item.ots.reduce((sum, ot) => sum + ot.labor_cost, 0);
+      const subtotalWithFactor = subtotalItem * item.factor;
       item.ots.forEach(ot => {
-        csv += `${idx + 1};"${item.name}";${item.factor};${ot.id};"${ot.subject}";${subtotal}\n`;
+        csv += `${idx + 1};"${item.name}";${item.factor};${ot.id};"${ot.subject}";${subtotalItem.toFixed(2).replace('.', ',')};${subtotalWithFactor.toFixed(2).replace('.', ',')}\n`;
       });
     });
-    downloadFile(csv, `cotizacion_${currentTicket.id}.csv`, 'text/csv');
+    downloadFile(csv, `cotizacion_${currentTicket.id}_${selectedYear}.csv`, 'text/csv');
   };
 
   const onDragStart = (e, otId) => {
@@ -164,6 +191,23 @@ const Cotizador = () => {
       <div className="cotizador-header">
         <h2>📋 Generador de Cotizaciones</h2>
         <div className="header-controls">
+          <div className="year-filter">
+            <span className="year-label">Año:</span>
+            <select
+              value={selectedYear}
+              onChange={(e) => changeYearFilter(e.target.value)}
+              className="year-select"
+              disabled={loading || availableYears.length === 0}
+            >
+              {availableYears.length > 0 ? (
+                availableYears.map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))
+              ) : (
+                <option value="">Cargando...</option>
+              )}
+            </select>
+          </div>
           <div className={`status-indicator ${loadStatus.includes('✅') ? 'success' : loadStatus.includes('❌') ? 'error' : 'warning'}`}>
             {loadStatus}
             {lastUpdate && (
@@ -174,7 +218,7 @@ const Cotizador = () => {
           </div>
           <button
             className="refresh-btn"
-            onClick={refreshData}
+            onClick={() => refreshData(selectedYear)}
             disabled={loading}
           >
             {loading ? '🔄 Actualizando...' : '🔄 Actualizar Datos'}
@@ -209,6 +253,9 @@ const Cotizador = () => {
                   </div>
                   <div className="result-subject">{ticket.subject}</div>
                   <div className="result-sector">{ticket.sector}</div>
+                  {ticket.año && ticket.año !== 'N/A' && (
+                    <div className="result-year">Año: {ticket.año}</div>
+                  )}
                 </div>
               ))}
             </div>
@@ -219,7 +266,7 @@ const Cotizador = () => {
       <div className="main-grid">
         <section className="glass-panel">
           <div className="section-title">
-            <span>Órdenes de Trabajo Disponibles</span>
+            <span>Órdenes de Trabajo Disponibles - Año {selectedYear}</span>
             {currentTicket && (
               <span className="ot-sector">{currentTicket.sector}</span>
             )}
@@ -250,6 +297,9 @@ const Cotizador = () => {
                     <span>🕒 {ot.labor_hours}h</span>
                     <span>💰 U$D {ot.labor_cost.toFixed(2)}</span>
                     <span>👥 {ot.technicians_count}</span>
+                    {ot.año && ot.año !== 'N/A' && (
+                      <span className="ot-year">📅 {ot.año}</span>
+                    )}
                   </div>
                 </div>
               ))
@@ -285,19 +335,38 @@ const Cotizador = () => {
                       onChange={(e) => updateItemName(item.id, e.target.value)}
                     />
                     <div className="factor-container">
-                      F: <input
-                        type="number"
-                        step="0.1"
-                        className="factor-input"
-                        value={item.factor}
-                        onChange={(e) => updateItemFactor(item.id, e.target.value)}
-                      />
+                      <span className="factor-label">Factor</span>
+
+                      <div className="factor-controls">
+                        <button
+                          className="factor-btn"
+                          onClick={() => updateItemFactor(item.id, item.factor - 0.1)}
+                        >
+                          −
+                        </button>
+
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          className="factor-input"
+                          value={item.factor}
+                          onChange={(e) => updateItemFactor(item.id, e.target.value)}
+                        />
+
+                        <button
+                          className="factor-btn"
+                          onClick={() => updateItemFactor(item.id, item.factor + 0.1)}
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
+
                     <button
                       className="btn btn-danger"
                       onClick={() => deleteItem(item.id)}
                     >
-                      ×
+                      X
                     </button>
                   </div>
                   <div className="item-ots">
@@ -307,6 +376,9 @@ const Cotizador = () => {
                       item.ots.map(ot => (
                         <div key={ot.id} className="assigned-ot">
                           <span>{ot.id} - {ot.subject.substring(0, 40)}...</span>
+                          {ot.año && ot.año !== 'N/A' && (
+                            <span className="ot-year-badge">{ot.año}</span>
+                          )}
                           <span
                             className="remove-ot"
                             onClick={() => removeOT(item.id, ot.id)}
@@ -330,7 +402,7 @@ const Cotizador = () => {
       {currentTicket && (
         <div className="summary-bar">
           <div className="total-info">
-            <div className="total-label">Total Cotizado (Mano de Obra)</div>
+            <div className="total-label">Total Cotizado (Mano de Obra) - Año {selectedYear}</div>
             <div className="total-value">$ {grandTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</div>
           </div>
           <div className="actions">
@@ -345,7 +417,7 @@ const Cotizador = () => {
         <div className="modal-overlay" onClick={() => setIsPreviewOpen(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Vista Previa</h2>
+              <h2>Vista Previa - Año {selectedYear}</h2>
               <button className="btn btn-danger" onClick={() => setIsPreviewOpen(false)}>Cerrar</button>
             </div>
             <textarea

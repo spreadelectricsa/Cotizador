@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useCallback } from 'react';
+import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import axios from 'axios';
 import dbData from '../../data/db.json';
 
@@ -18,10 +18,13 @@ export const DataProvider = ({ children }) => {
   const [loadStatus, setLoadStatus] = useState('⏳ Cargando...');
   const [lastUpdate, setLastUpdate] = useState(null);
   const [error, setError] = useState(null);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const [availableYears, setAvailableYears] = useState([]);
 
   const API_URL = import.meta.env.VITE_API_URL || 'https://spread-erp.ddns.net/api/method';
   const API_TOKEN = import.meta.env.VITE_API_TOKEN || '';
   const API_ENDPOINT = 'spread_app.app_gestion_spread.report.costo_mano_de_obra.costo_mano_de_obra.get_labor_cost_no_quotation';
+  const API_YEARS_ENDPOINT = 'spread_app.app_gestion_spread.report.costo_mano_de_obra.costo_mano_de_obra.get_years_available';
 
   const processRawData = (raw) => {
     try {
@@ -38,6 +41,7 @@ export const DataProvider = ({ children }) => {
             subject: row.subject_ticket || row.subject || row.asunto || 'Sin asunto',
             sector: row.sector || 'N/A',
             date: row.fecha_ejecucion || row.fecha_ticket || row.fecha || '0000-00-00',
+            año: row.año || 'N/A',
             costo_total: 0
           });
         }
@@ -63,6 +67,7 @@ export const DataProvider = ({ children }) => {
             ticket_id: iss,
             subject: row.subject_ot || row.subject || row.subject_ticket || 'Sin asunto',
             sector: row.sector || 'N/A',
+            año: row.año || 'N/A',
             labor_hours: parseFloat(hours.toFixed(2)),
             labor_cost: laborCost,
             technicians_count: parseInt(row.nro_tec || row.tecnicos || 0),
@@ -94,7 +99,31 @@ export const DataProvider = ({ children }) => {
     }
   }, []);
 
-  const fetchDataFromAPI = useCallback(async () => {
+  const fetchYearsFromAPI = useCallback(async () => {
+    try {
+      const url = `${API_URL}/${API_YEARS_ENDPOINT}`;
+      const headers = {
+        'Authorization': API_TOKEN,
+        'Content-Type': 'application/json'
+      };
+
+      const response = await axios.post(url, {}, { 
+        headers, 
+        timeout: 30000 
+      });
+
+      if (response.data && response.data.message && response.data.message.success) {
+        const years = response.data.message.years || [];
+        return years;
+      }
+      return [];
+    } catch (error) {
+      console.error('Error fetching years:', error);
+      return [];
+    }
+  }, [API_URL, API_TOKEN]);
+
+  const fetchDataFromAPI = useCallback(async (year = '') => {
     try {
       setLoading(true);
       setLoadStatus('🔄 Conectando con API...');
@@ -109,7 +138,9 @@ export const DataProvider = ({ children }) => {
         'Content-Type': 'application/json'
       };
 
-      const response = await axios.post(url, {}, { 
+      const filters = year ? { year } : {};
+
+      const response = await axios.post(url, { filters: JSON.stringify(filters) }, { 
         headers, 
         timeout: 120000 
       });
@@ -121,7 +152,7 @@ export const DataProvider = ({ children }) => {
           if (message.data && Array.isArray(message.data)) {
             const processed = processRawData(message.data);
             setDb(processed);
-            setLoadStatus(`✅ ${processed.tickets.length} registros desde API`);
+            setLoadStatus(`✅ ${processed.tickets.length} registros desde API${year ? ` (Año ${year})` : ''}`);
             setLastUpdate(new Date());
             setError(null);
             return processed;
@@ -162,27 +193,52 @@ export const DataProvider = ({ children }) => {
     }
   }, [API_URL, API_TOKEN, loadLocalData]);
 
-  const refreshData = useCallback(() => {
+  const refreshData = useCallback((year = '') => {
+    const yearToUse = year || selectedYear;
     if (API_URL && API_TOKEN) {
-      return fetchDataFromAPI();
+      return fetchDataFromAPI(yearToUse);
     } else {
       loadLocalData();
       setLoadStatus('✅ Datos locales recargados');
       return Promise.resolve(db);
     }
-  }, [API_URL, API_TOKEN, fetchDataFromAPI, loadLocalData, db]);
+  }, [API_URL, API_TOKEN, fetchDataFromAPI, loadLocalData, db, selectedYear]);
 
-  React.useEffect(() => {
-    loadLocalData();
-    
-    const timer = setTimeout(() => {
-      if (API_URL && API_TOKEN) {
-        fetchDataFromAPI();
-      }
-    }, 1000);
-
-    return () => clearTimeout(timer);
+  const changeYearFilter = useCallback((year) => {
+    setSelectedYear(year);
   }, []);
+
+  useEffect(() => {
+    const initializeData = async () => {
+      const currentYear = new Date().getFullYear().toString();
+      
+      if (API_URL && API_TOKEN) {
+        try {
+          const years = await fetchYearsFromAPI();
+          setAvailableYears(years);
+          
+          if (years.length > 0) {
+            const hasCurrentYear = years.includes(currentYear);
+            const defaultYear = hasCurrentYear ? currentYear : years[0];
+            setSelectedYear(defaultYear);
+            
+            if (defaultYear) {
+              await fetchDataFromAPI(defaultYear);
+            }
+          } else {
+            await fetchDataFromAPI(currentYear);
+          }
+        } catch (error) {
+          console.error('Error inicializando:', error);
+          loadLocalData();
+        }
+      } else {
+        loadLocalData();
+      }
+    };
+
+    initializeData();
+  }, [API_URL, API_TOKEN]);
 
   return (
     <DataContext.Provider value={{
@@ -191,7 +247,10 @@ export const DataProvider = ({ children }) => {
       loadStatus,
       lastUpdate,
       error,
+      selectedYear,
+      availableYears,
       refreshData,
+      changeYearFilter,
       processRawData
     }}>
       {children}
