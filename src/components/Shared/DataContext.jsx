@@ -103,7 +103,7 @@ export const DataProvider = ({ children }) => {
     try {
       const url = `${API_URL}/${API_YEARS_ENDPOINT}`;
       const headers = {
-        'Authorization': `token ${API_TOKEN}`,
+        'Authorization': API_TOKEN,
         'Content-Type': 'application/json'
       };
 
@@ -134,7 +134,7 @@ export const DataProvider = ({ children }) => {
 
       const url = `${API_URL}/${API_ENDPOINT}`;
       const headers = {
-        'Authorization': `token ${API_TOKEN}`,
+        'Authorization': API_TOKEN,
         'Content-Type': 'application/json'
       };
 
