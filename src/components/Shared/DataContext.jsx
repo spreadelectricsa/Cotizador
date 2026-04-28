@@ -21,8 +21,12 @@ export const DataProvider = ({ children }) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [availableYears, setAvailableYears] = useState([]);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'https://spread-erp.ddns.net/api/method';
-  const API_TOKEN = import.meta.env.VITE_API_TOKEN || '';
+  const API_URL = import.meta.env.VITE_API_URL;
+  const API_TOKEN = import.meta.env.VITE_API_TOKEN;
+
+  console.log('API_URL:', API_URL);
+  console.log('API_TOKEN:', API_TOKEN ? 'OK' : 'VACÍO');
+  
   const API_ENDPOINT = 'spread_app.app_gestion_spread.report.costo_mano_de_obra.costo_mano_de_obra.get_labor_cost_no_quotation';
   const API_YEARS_ENDPOINT = 'spread_app.app_gestion_spread.report.costo_mano_de_obra.costo_mano_de_obra.get_years_available';
 
