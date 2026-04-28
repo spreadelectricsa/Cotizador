@@ -1,9 +1,7 @@
 name: Build and Deploy
-
 on:
   push:
     branches: [ main ]
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -13,10 +11,17 @@ jobs:
         with:
           node-version: 18
       - run: npm install
+
+      - name: Check secrets
+        run: |
+          echo "VITE_API_URL definida: ${{ secrets.VITE_API_URL != '' }}"
+          echo "VITE_API_TOKEN definida: ${{ secrets.VITE_API_TOKEN != '' }}"
+
       - run: npm run build
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_API_TOKEN: ${{ secrets.VITE_API_TOKEN }}
+
       - uses: actions/upload-artifact@v4
         with:
           name: dist
