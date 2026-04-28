@@ -21,15 +21,6 @@ export const DataProvider = ({ children }) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [availableYears, setAvailableYears] = useState([]);
 
-  const API_URL = import.meta.env.VITE_API_URL;
-  const API_TOKEN = import.meta.env.VITE_API_TOKEN;
-
-  console.log('API_URL:', API_URL);
-  console.log('API_TOKEN:', API_TOKEN ? 'OK' : 'VACÍO');
-  
-  const API_ENDPOINT = 'spread_app.app_gestion_spread.report.costo_mano_de_obra.costo_mano_de_obra.get_labor_cost_no_quotation';
-  const API_YEARS_ENDPOINT = 'spread_app.app_gestion_spread.report.costo_mano_de_obra.costo_mano_de_obra.get_years_available';
-
   const processRawData = (raw) => {
     try {
       const ticketsMap = new Map();
@@ -105,49 +96,31 @@ export const DataProvider = ({ children }) => {
 
   const fetchYearsFromAPI = useCallback(async () => {
     try {
-      const url = `${API_URL}/${API_YEARS_ENDPOINT}`;
-      const headers = {
-        'Authorization': API_TOKEN,
-        'Content-Type': 'application/json'
-      };
-
-      const response = await axios.post(url, {}, { 
-        headers, 
-        timeout: 30000 
+      const response = await axios.post('/api/years', {}, {
+        timeout: 30000
       });
 
       if (response.data && response.data.message && response.data.message.success) {
-        const years = response.data.message.years || [];
-        return years;
+        return response.data.message.years || [];
       }
       return [];
     } catch (error) {
       console.error('Error fetching years:', error);
       return [];
     }
-  }, [API_URL, API_TOKEN]);
+  }, []);
 
   const fetchDataFromAPI = useCallback(async (year = '') => {
     try {
       setLoading(true);
       setLoadStatus('🔄 Conectando con API...');
 
-      if (!API_URL || !API_TOKEN) {
-        throw new Error('Configuración de API no disponible');
-      }
-
-      const url = `${API_URL}/${API_ENDPOINT}`;
-      const headers = {
-        'Authorization': API_TOKEN,
-        'Content-Type': 'application/json'
-      };
-
       const filters = year ? { year } : {};
 
-      const response = await axios.post(url, { filters: JSON.stringify(filters) }, { 
-        headers, 
-        timeout: 120000 
-      });
+      const response = await axios.post('/api/data', 
+        { filters: JSON.stringify(filters) }, 
+        { timeout: 120000 }
+      );
 
       if (response.data && response.data.message) {
         const message = response.data.message;
@@ -195,18 +168,12 @@ export const DataProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [API_URL, API_TOKEN, loadLocalData]);
+  }, [loadLocalData]);
 
   const refreshData = useCallback((year = '') => {
     const yearToUse = year || selectedYear;
-    if (API_URL && API_TOKEN) {
-      return fetchDataFromAPI(yearToUse);
-    } else {
-      loadLocalData();
-      setLoadStatus('✅ Datos locales recargados');
-      return Promise.resolve(db);
-    }
-  }, [API_URL, API_TOKEN, fetchDataFromAPI, loadLocalData, db, selectedYear]);
+    return fetchDataFromAPI(yearToUse);
+  }, [fetchDataFromAPI, selectedYear]);
 
   const changeYearFilter = useCallback((year) => {
     setSelectedYear(year);
@@ -216,33 +183,26 @@ export const DataProvider = ({ children }) => {
     const initializeData = async () => {
       const currentYear = new Date().getFullYear().toString();
       
-      if (API_URL && API_TOKEN) {
-        try {
-          const years = await fetchYearsFromAPI();
-          setAvailableYears(years);
-          
-          if (years.length > 0) {
-            const hasCurrentYear = years.includes(currentYear);
-            const defaultYear = hasCurrentYear ? currentYear : years[0];
-            setSelectedYear(defaultYear);
-            
-            if (defaultYear) {
-              await fetchDataFromAPI(defaultYear);
-            }
-          } else {
-            await fetchDataFromAPI(currentYear);
-          }
-        } catch (error) {
-          console.error('Error inicializando:', error);
-          loadLocalData();
+      try {
+        const years = await fetchYearsFromAPI();
+        setAvailableYears(years);
+        
+        if (years.length > 0) {
+          const hasCurrentYear = years.includes(currentYear);
+          const defaultYear = hasCurrentYear ? currentYear : years[0];
+          setSelectedYear(defaultYear);
+          await fetchDataFromAPI(defaultYear);
+        } else {
+          await fetchDataFromAPI(currentYear);
         }
-      } else {
+      } catch (error) {
+        console.error('Error inicializando:', error);
         loadLocalData();
       }
     };
 
     initializeData();
-  }, [API_URL, API_TOKEN]);
+  }, []);
 
   return (
     <DataContext.Provider value={{
