@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
   const response = await fetch(
-    `${process.env.API_URL}/spread_app.app_gestion_spread.report.costo_mano_de_obra.costo_mano_de_obra.get_years_available`,
+    `${process.env.API_URL}/api/method/spread_app.app_gestion_spread.report.costo_mano_de_obra.costo_mano_de_obra.get_years_available`,
     {
       method: 'POST',
       headers: {
